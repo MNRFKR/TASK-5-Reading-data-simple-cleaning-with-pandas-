@@ -1,0 +1,56 @@
+import os
+import pandas as pd
+
+# Load
+print("Current Directory:", os.getcwd())
+df = pd.read_csv(r"C:\Marvel\Desktop\task 5\housing-data.csv")
+
+# Inspect
+print(df.head())
+print(df.info())
+
+# Clean: missing + duplicates
+print("Missing values:\n", df.isnull().sum())
+df = df.drop_duplicates()
+print("Shape after duplicates removed:", df.shape)
+
+df = df.dropna(axis=0)
+df['HOUSTNSA'] = df['HOUSTNSA'].fillna(df['HOUSTNSA'].median())
+df['DATE'] = df['DATE'].fillna(df['DATE'].mode()[0])
+print("Missing values after cleaning:\n", df.isnull().sum())
+
+print("Before:", df.shape)
+df = df.drop_duplicates()
+print("After:", df.shape)
+
+# Types
+df['DATE'] = pd.to_datetime(df['DATE'], format='%Y-%m-%d')
+df['HOUSTNSA'] = df['HOUSTNSA'].astype(float)
+print("Dtypes:\n", df.dtypes)
+
+# Transformations
+df['Year'] = df['DATE'].dt.year
+
+# Safe dynamic bins (monotonic increasing)
+max_val = float(df['HOUSTNSA'].max())
+bins = [0, 100, 200]
+if max_val > 300:
+    bins.append(300)
+bins.append(max_val + 1e-6)  # ensure strictly increasing
+labels = ['Low', 'Medium', 'High', 'Very High'][:len(bins) - 1]
+
+df['HOUSTNSA_Band'] = pd.cut(
+    df['HOUSTNSA'],
+    bins=bins,
+    labels=labels,
+    include_lowest=True,
+    right=True
+)
+
+df['Monthly_Growth'] = df['HOUSTNSA'].diff()
+
+print(df[['DATE', 'HOUSTNSA', 'Year', 'HOUSTNSA_Band', 'Monthly_Growth']].head())
+
+# Save
+df.to_csv("cleaned_housing_data.csv", index=False)
+print("Cleaned dataset saved as cleaned_housing_data.csv")
